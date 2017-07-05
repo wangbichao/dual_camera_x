@@ -495,6 +495,10 @@ startOne(ImgBufInfo const & rImgBufInfo)
     {
         CPTLogStr(Event_SShot_startOneMem, CPTFlagSeparator, "queryYuvRawImgBufInfo");
         ImgBufInfo rYuvImgBufInfo = queryYuvRawImgBufInfo();
+        CPTLogStr(Event_SShot_startOneMem, CPTFlagSeparator, "queryYuvImgXchipLeftBufInfo");
+        ImgBufInfo rYuvImgLeftBufInfo = queryYuvImgXchipLeftBufInfo();  
+        CPTLogStr(Event_SShot_startOneMem, CPTFlagSeparator, "queryYuvImgXchipRightBufInfo");
+        ImgBufInfo rYuvImgRightBufInfo = queryYuvImgXchipRightBufInfo();
         CPTLogStr(Event_SShot_startOneMem, CPTFlagSeparator, "queryPostViewImgInfo");
         ImgBufInfo rPostViewBufInfo = queryPostViewImgInfo();
         CPTLogStr(Event_SShot_startOneMem, CPTFlagSeparator, "queryJpegImgBufInfo");
@@ -1657,6 +1661,62 @@ queryYuvRawImgBufInfo()
     allocImgMem("Yuv", eImgFmt, u4Width, u4Height, mYuvMem);
     ImgBufInfo rImgBufInfo;
     setImageBuf(eImgFmt, u4Width, u4Height,  rImgBufInfo, mYuvMem);
+
+    return rImgBufInfo;
+}
+
+ImgBufInfo
+SingleShot::
+queryYuvImgXchipLeftBufInfo()
+{
+    // is upper layer register buffer
+    if (0 != mYuvImgLeftBufInfo.u4BufSize)
+    {
+        return mYuvImgLeftBufInfo;
+    }
+    
+    //
+    EImageFormat eImgFmt = mShotParam.ePictureFmt;
+    // YUV format not set, use YUY2 as default
+    if (eImgFmt_UNKNOWN == eImgFmt || !isDataMsgEnabled(ECamShot_DATA_MSG_YUV))
+    {
+        eImgFmt = eImgFmt_YUY2;
+    }
+    MUINT32 u4Width = 0, u4Height = 0, u4WidthXchip = 0;
+    getPictureDimension(u4Width, u4Height);
+    //
+    u4WidthXchip = u4Width/2;
+    allocImgMem("Yuv", eImgFmt, u4WidthXchip, u4Height, mYuvMem);
+    ImgBufInfo rImgBufInfo;
+    setImageBuf(eImgFmt, u4WidthXchip, u4Height,  rImgBufInfo, mYuvMem);
+
+    return rImgBufInfo;
+}
+
+ImgBufInfo
+SingleShot::
+queryYuvImgXchipRightBufInfo()
+{
+    // is upper layer register buffer
+    if (0 != mYuvImgRightBufInfo.u4BufSize)
+    {
+        return mYuvImgRightBufInfo;
+    }
+    
+    //
+    EImageFormat eImgFmt = mShotParam.ePictureFmt;
+    // YUV format not set, use YUY2 as default
+    if (eImgFmt_UNKNOWN == eImgFmt || !isDataMsgEnabled(ECamShot_DATA_MSG_YUV))
+    {
+        eImgFmt = eImgFmt_YUY2;
+    }
+    MUINT32 u4Width = 0, u4Height = 0, u4WidthXchip = 0;
+    getPictureDimension(u4Width, u4Height);
+    //
+    u4WidthXchip = u4Width/2;
+    allocImgMem("Yuv", eImgFmt, u4WidthXchip, u4Height, mYuvMem);
+    ImgBufInfo rImgBufInfo;
+    setImageBuf(eImgFmt, u4WidthXchip, u4Height,  rImgBufInfo, mYuvMem);
 
     return rImgBufInfo;
 }
