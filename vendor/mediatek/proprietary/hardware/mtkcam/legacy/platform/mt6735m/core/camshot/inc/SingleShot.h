@@ -145,6 +145,8 @@ protected:    //// helper function
     //
     ImgBufInfo querySensorRawImgBufInfo();
     ImgBufInfo queryYuvRawImgBufInfo();
+    ImgBufInfo queryYuvImgXchipLeftBufInfo();
+    ImgBufInfo queryYuvImgXchipRightBufInfo();
     ImgBufInfo queryJpegImgBufInfo();
     ImgBufInfo queryPostViewImgInfo();
     ImgBufInfo queryPrePostViewImgInfo();//fake orientation
@@ -183,6 +185,8 @@ private:      //// data members
     ////      buffer
     ImgBufInfo mRawImgBufInfo;
     ImgBufInfo mYuvImgBufInfo;
+    ImgBufInfo mYuvImgLeftBufInfo;
+    ImgBufInfo mYuvImgRightBufInfo;
     ImgBufInfo mPostViewImgBufInfo;
     ImgBufInfo mJpegImgBufInfo;
     ImgBufInfo mThumbImgBufInfo;
