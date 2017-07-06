@@ -158,6 +158,8 @@ SingleShot(
     , mThumbImgBufInfo()
     , mRawMem()
     , mYuvMem()
+    , mMainYuvMem(),
+    , mSubYuvMem(),
     , mPostViewMem()
     , mPrePostViewMem()
     , mJpegMem()
@@ -1582,6 +1584,16 @@ freeShotMem()
     {
         deallocMem(mYuvMem);
     }
+    // MainYuv
+    if (0 != mMainYuvMem.size)
+    {
+        deallocMem(mMainYuvMem);
+    }
+    // SubYuv
+    if (0 != mSubYuvMem.size)
+    {
+        deallocMem(mSubYuvMem);
+    }
     // Postview
     if (0 != mPostViewMem.size)
     {
@@ -1655,6 +1667,10 @@ queryYuvRawImgBufInfo()
     getPictureDimension(u4Width, u4Height);
     //
     allocImgMem("Yuv", eImgFmt, u4Width, u4Height, mYuvMem);
+	if(0 == mMainYuvMem.size)
+		allocImgMem("Yuv", eImgFmt, 1320, 980, mMainYuvMem);
+	if(0 == mSubYuvMem.size)
+		allocImgMem("Yuv", eImgFmt, 1320, 980, mSubYuvMem);
     ImgBufInfo rImgBufInfo;
     setImageBuf(eImgFmt, u4Width, u4Height,  rImgBufInfo, mYuvMem);
 
