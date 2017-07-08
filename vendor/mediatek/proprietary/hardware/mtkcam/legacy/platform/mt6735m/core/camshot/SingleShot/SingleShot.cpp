@@ -158,6 +158,8 @@ SingleShot(
     , mThumbImgBufInfo()
     , mRawMem()
     , mYuvMem()
+    , mLeftYuvMem()
+    , mRightYuvMem()
     , mPostViewMem()
     , mPrePostViewMem()
     , mJpegMem()
@@ -384,7 +386,7 @@ startOne(SensorParam const & rSensorParam)
             break;
     }
 
-    MY_LOGD("sensorDev %d wxh: %dx%d, ccmode(%d), profile(%d)",
+    MY_LOGD("dongtuo sensorDev %d wxh: %dx%d, ccmode(%d), profile(%d)",
              rSensorParam.u4DeviceID, u4TgInW, u4TgInH, mbCCmode, meProfile);
 
     if (NULL == mpCamIOPipe)
@@ -401,7 +403,7 @@ startOne(SensorParam const & rSensorParam)
         mpCamIOPipe->init();
     }
     //
-    MY_LOGD("[startOne] enabled msg (notify, data) = (0x%x, 0x%x)", mi4NotifyMsgSet, mi4DataMsgSet);
+    MY_LOGD("dongtuo [startOne] enabled msg (notify, data) = (0x%x, 0x%x)", mi4NotifyMsgSet, mi4DataMsgSet);
     //
     // Start Of Frame notify
 //#warning [TODO] this should callback from pipe
@@ -424,7 +426,7 @@ startOne(SensorParam const & rSensorParam)
     ImgBufInfo rRawImgBufInfo = querySensorRawImgBufInfo();
     CPTLogStr(Event_SShot_startOneSensor, CPTFlagSeparator, "createSensorRawImg");
 
-    if (isDataMsgEnabled(ECamShot_DATA_MSG_JPEG))
+    if (isDataMsgEnabled(ECamShot_DATA_MSG_YUV|ECamShot_DATA_MSG_POSTVIEW|ECamShot_DATA_MSG_JPEG))
     {
         preAllocMem();
     }
@@ -486,6 +488,11 @@ startOne(ImgBufInfo const & rImgBufInfo)
     // calc the zoom crop ratio
 
     Rect rRect = MtkCamUtils::calCrop(rSrcRect, rDstRect, mShotParam.u4ZoomRatio);
+    //Rect rLeftRect(0, 0, 720, 2560);
+    Rect rLeftRect = rDstRect;
+    rLeftRect.w /= 2;
+    MY_LOGD("dongtuo %d %d %d %d ORI %d\n", rLeftRect.x, rLeftRect.y, rLeftRect.w, rLeftRect.h, mu4DiffOri);
+	//Rect rRightRect
 
 
     // (2) create yuv image
@@ -505,6 +512,7 @@ startOne(ImgBufInfo const & rImgBufInfo)
         ImgBufInfo rJpegImgBufInfo = queryJpegImgBufInfo();
         CPTLogStr(Event_SShot_startOneMem, CPTFlagSeparator, "queryThumbImgBufInfo");
         ImgBufInfo rThumbImgBufInfo = queryThumbImgBufInfo();
+MY_LOGD("dongtuo create jpeg image 1");
 
         MUINT32 u4JpegSize = 0;
         MUINT32 u4ThumbnailSize = 0;
@@ -522,6 +530,8 @@ startOne(ImgBufInfo const & rImgBufInfo)
             ret = ret
                    && createYuvRawImg(rImgBufInfo, rRect, mShotParam.u4PictureRotation, mShotParam.u4PictureFlip, rYuvImgBufInfo, rPostViewBufInfo);
         }
+        createYuvRawImg(rImgBufInfo, rLeftRect, mShotParam.u4PictureRotation, mShotParam.u4PictureFlip, rYuvImgLeftBufInfo, rPostViewBufInfo);
+        createYuvRawImg(rImgBufInfo, rLeftRect, mShotParam.u4PictureRotation, mShotParam.u4PictureFlip, rYuvImgRightBufInfo, rPostViewBufInfo);
         ret = ret
                && handleDataCallback(ECamShot_DATA_MSG_POSTVIEW, 0, 0, reinterpret_cast<MUINT8*>(rPostViewBufInfo.u4BufVA), rPostViewBufInfo.u4BufSize)
                && handleDataCallback(ECamShot_DATA_MSG_YUV, 0 , 0 , reinterpret_cast<MUINT8*>(rYuvImgBufInfo.u4BufVA), rYuvImgBufInfo.u4BufSize)
@@ -539,6 +549,7 @@ startOne(ImgBufInfo const & rImgBufInfo)
     }
     else if (isDataMsgEnabled(ECamShot_DATA_MSG_YUV) && isDataMsgEnabled(ECamShot_DATA_MSG_POSTVIEW))
     {
+MY_LOGD("dongtuo create jpeg image 2");
         ImgBufInfo rYuvImgBufInfo = queryYuvRawImgBufInfo();
         ImgBufInfo rPostViewBufInfo = queryPostViewImgInfo();
 
@@ -560,6 +571,7 @@ startOne(ImgBufInfo const & rImgBufInfo)
     }
     else if (isDataMsgEnabled(ECamShot_DATA_MSG_YUV))
     {
+MY_LOGD("dongtuo create jpeg image 3");
         ImgBufInfo rYuvImgBufInfo = queryYuvRawImgBufInfo();
         ret = ret
                && createYuvRawImg(rImgBufInfo, rRect, ANGLE_SUB(mShotParam.u4PictureRotation, mu4DiffOri), mShotParam.u4PictureFlip, rYuvImgBufInfo)
@@ -567,6 +579,7 @@ startOne(ImgBufInfo const & rImgBufInfo)
     }
     else if (isDataMsgEnabled(ECamShot_DATA_MSG_POSTVIEW))
     {
+MY_LOGD("dongtuo create jpeg image 4");
         //! should not enter this case
         ImgBufInfo rPostViewBufInfo = queryPostViewImgInfo();
         if( mu4DiffOri )
@@ -617,7 +630,7 @@ startOne(SensorParam const & rSensorParam, ImgBufInfo const & rImgBufInfo)
             if(pHalSensorList->querySensorDevIdx(i) == static_cast<MUINT32>(rSensorParam.u4DeviceID))
             {
                 sensorOpenId = i;
-                MY_LOGD("sensorOpenId(%d)",sensorOpenId);
+                MY_LOGD("dongtuo sensorOpenId(%d)",sensorOpenId);
                 break;
             }
         }
@@ -641,7 +654,7 @@ startOne(SensorParam const & rSensorParam, ImgBufInfo const & rImgBufInfo)
 
     if(sensorStaticInfo.fakeOrientation)
     {
-        MY_LOGD("realOri %d, facing %d", sensorStaticInfo.orientationAngle, sensorStaticInfo.facingDirection );
+        MY_LOGD("dongtuo realOri %d, facing %d", sensorStaticInfo.orientationAngle, sensorStaticInfo.facingDirection );
         if( sensorStaticInfo.facingDirection == 1)
         {
             mu4DiffOri = ANGLE_SUB(270, sensorStaticInfo.orientationAngle);
@@ -659,7 +672,7 @@ startOne(SensorParam const & rSensorParam, ImgBufInfo const & rImgBufInfo)
     sensor_hal->destroyInstance();
     sensor_hal = NULL;
 
-    MY_LOGD("DeviceID(%d), fakeOrientation(%d), DiffOri(%d)", \
+    MY_LOGD("dongtuo DeviceID(%d), fakeOrientation(%d), DiffOri(%d)", \
             rSensorParam.u4DeviceID, sensorStaticInfo.fakeOrientation, mu4DiffOri);
     //
     dumpSensorParam(mSensorParam);
@@ -680,7 +693,7 @@ startOne(SensorParam const & rSensorParam, ImgBufInfo const & rImgBufInfo)
      }
     #endif
     //
-    MY_LOGD("[startOne] enabled msg (notify, data) = (0x%x, 0x%x)", mi4NotifyMsgSet, mi4DataMsgSet);
+    MY_LOGD("dongtuo [startOne] enabled msg (notify, data) = (0x%x, 0x%x)", mi4NotifyMsgSet, mi4DataMsgSet);
     //
     // Start Of Frame notify
 #warning [TODO] this should callback from pipe
@@ -688,7 +701,7 @@ startOne(SensorParam const & rSensorParam, ImgBufInfo const & rImgBufInfo)
 
     if (!isDataMsgEnabled(ECamShot_DATA_MSG_ALL) && !isNotifyMsgEnabled(ECamShot_NOTIFY_MSG_ALL))
     {
-        MY_LOGE("[startOne] No data msg enable !");
+        MY_LOGE("dongtuo [startOne] No data msg enable !");
         return MFALSE;
     }
 
@@ -723,7 +736,7 @@ startOne(SensorParam const & rSensorParam, ImgBufInfo const & rImgBufInfo)
     ret = mpCamIOPipe->uninit();
     if (!ret)
     {
-        MY_LOGE("mpCamIOPipe->uninit() fail ");
+        MY_LOGE("dongtuo mpCamIOPipe->uninit() fail ");
     }
 
     mpCamIOPipe = NULL;
@@ -1012,7 +1025,7 @@ createYuvRawImg(ImgBufInfo const & rSrcImgBufInfo, Rect const rSrcCropRect, MUIN
     vInPorts.push_back(&rMemInPort);
     vOutPorts.push_back(&rVdoPort);
     //
-    MY_LOGD("[createYuvRawImg] enable postview ");
+    MY_LOGD("dongtuo [createYuvRawImg] enable postview ");
     MemoryOutPortInfo rDispPort(ImgInfo(rDstImgBufInfo2.eImgFmt, rDstImgBufInfo2.u4ImgWidth, rDstImgBufInfo2.u4ImgHeight),
                                    rDstImgBufInfo2.u4Stride, 0, 0);
     vOutPorts.push_back(&rDispPort);
@@ -1426,9 +1439,9 @@ SingleShot::
 registerImgBufInfo(ECamShotImgBufType const eBufType, ImgBufInfo const &rImgBuf)
 {
      FUNCTION_LOG_START;
-     MY_LOGD("[registerImgBufInfo] type = %d", eBufType);
-     MY_LOGD("[registerImgBufInfo] (width, height, format) = (%d, %d, 0x%x)", rImgBuf.u4ImgWidth, rImgBuf.u4ImgHeight, rImgBuf.eImgFmt);
-     MY_LOGD("[registerImgBufInfo] (VA, PA, Size, ID) = (0x%x, 0x%x, %d, %d)", rImgBuf.u4BufVA, rImgBuf.u4BufPA, rImgBuf.u4BufSize, rImgBuf.i4MemID);
+     MY_LOGD("dongtuo [registerImgBufInfo] type = %d", eBufType);
+     MY_LOGD("dongtuo [registerImgBufInfo] (width, height, format) = (%d, %d, 0x%x)", rImgBuf.u4ImgWidth, rImgBuf.u4ImgHeight, rImgBuf.eImgFmt);
+     MY_LOGD("dongtuo [registerImgBufInfo] (VA, PA, Size, ID) = (0x%x, 0x%x, %d, %d)", rImgBuf.u4BufVA, rImgBuf.u4BufPA, rImgBuf.u4BufSize, rImgBuf.i4MemID);
      if (ECamShot_BUF_TYPE_BAYER == eBufType)
      {
          mRawImgBufInfo = rImgBuf;
@@ -1463,7 +1476,7 @@ allocMem(IMEM_BUF_INFO & rMemBuf)
 {
     //
     if (mpMemDrv->allocVirtBuf(&rMemBuf)) {
-        MY_LOGE("g_pIMemDrv->allocVirtBuf() error");
+        MY_LOGE("dongtuo g_pIMemDrv->allocVirtBuf() error");
         return MFALSE;
     }
     //::memset((void*)rMemBuf.virtAddr, 0 , rMemBuf.size);
@@ -1487,7 +1500,7 @@ deallocMem(IMEM_BUF_INFO & rMemBuf)
 #if 1
     if (mpMemDrv->unmapPhyAddr(&rMemBuf))
     {
-        MY_LOGE("m_pIMemDrv->unmapPhyAddr() error");
+        MY_LOGE("dongtuo m_pIMemDrv->unmapPhyAddr() error");
         return MFALSE;
     }
 #endif
@@ -1527,21 +1540,21 @@ allocImgMem(char const* const pszName, EImageFormat const eFmt, MUINT32 const u4
 {
     //
     MtkCamUtils::CamProfile profile("allocImgMem", "SingleShot");
-    MY_LOGD("[allocImgMem] %s, (format, width, height) = (0x%x, %d, %d)", pszName, eFmt, u4Width, u4Height);
+    MY_LOGD("dongtuo [allocImgMem] %s, (format, width, height) = (0x%x, %d, %d)", pszName, eFmt, u4Width, u4Height);
     MUINT32 u4BufSize = queryImgBufSize(eFmt, u4Width, u4Height);
     //
     if (0 == rMem.size)
     {
         rMem.size = (u4BufSize  + L1_CACHE_BYTES-1) & ~(L1_CACHE_BYTES-1);
         allocMem(rMem);
-        MY_LOGD("[allocImgMem] (va, pa, size) = (0x%x, 0x%x, %d)",  rMem.virtAddr, rMem.phyAddr, rMem.size);
+        MY_LOGD("dongtuo [allocImgMem] (va, pa, size) = (0x%x, 0x%x, %d)",  rMem.virtAddr, rMem.phyAddr, rMem.size);
     }
     else
     {
         if (rMem.size < u4BufSize)
         {
             reallocMem(rMem, u4BufSize);
-            MY_LOGD("[allocImgMem] re-allocate (va, pa, size) = (0x%x, 0x%x, %d)", rMem.virtAddr, rMem.phyAddr, rMem.size);
+            MY_LOGD("dongtuo [allocImgMem] re-allocate (va, pa, size) = (0x%x, 0x%x, %d)", rMem.virtAddr, rMem.phyAddr, rMem.size);
         }
     }
     profile.print();
@@ -1585,6 +1598,16 @@ freeShotMem()
     if (0 != mYuvMem.size)
     {
         deallocMem(mYuvMem);
+    }
+    // LeftYuv
+    if (0 != mLeftYuvMem.size)
+    {
+        deallocMem(mLeftYuvMem);
+    }
+    // RightYuv
+    if (0 != mRightYuvMem.size)
+    {
+        deallocMem(mRightYuvMem);
     }
     // Postview
     if (0 != mPostViewMem.size)
@@ -1686,9 +1709,9 @@ queryYuvImgXchipLeftBufInfo()
     getPictureDimension(u4Width, u4Height);
     //
     u4WidthXchip = u4Width/2;
-    allocImgMem("Yuv", eImgFmt, u4WidthXchip, u4Height, mYuvMem);
+    allocImgMem("Yuv", eImgFmt, u4WidthXchip, u4Height, mLeftYuvMem);
     ImgBufInfo rImgBufInfo;
-    setImageBuf(eImgFmt, u4WidthXchip, u4Height,  rImgBufInfo, mYuvMem);
+    setImageBuf(eImgFmt, u4WidthXchip, u4Height,  rImgBufInfo, mLeftYuvMem);
 
     return rImgBufInfo;
 }
@@ -1710,13 +1733,14 @@ queryYuvImgXchipRightBufInfo()
     {
         eImgFmt = eImgFmt_YUY2;
     }
+    eImgFmt = eImgFmt_YV12;
     MUINT32 u4Width = 0, u4Height = 0, u4WidthXchip = 0;
     getPictureDimension(u4Width, u4Height);
     //
     u4WidthXchip = u4Width/2;
-    allocImgMem("Yuv", eImgFmt, u4WidthXchip, u4Height, mYuvMem);
+    allocImgMem("Yuv", eImgFmt, u4WidthXchip, u4Height, mRightYuvMem);
     ImgBufInfo rImgBufInfo;
-    setImageBuf(eImgFmt, u4WidthXchip, u4Height,  rImgBufInfo, mYuvMem);
+    setImageBuf(eImgFmt, u4WidthXchip, u4Height,  rImgBufInfo, mRightYuvMem);
 
     return rImgBufInfo;
 }
@@ -1820,7 +1844,7 @@ queryThumbImgBufInfo()
     if (mThumbnailMem.size == 0)
     {
         mThumbnailMem.size = 128 * 1024;
-        MY_LOGD("allocate thumbnail mem, size = %d", mThumbnailMem.size);
+        MY_LOGD("dongtuo allocate thumbnail mem, size = %d", mThumbnailMem.size);
         allocMem(mThumbnailMem);
     }
     ImgBufInfo rImgBufInfo;
@@ -1856,7 +1880,7 @@ SingleShot::getPrePostviewDimension(MUINT32 & u4Width,  MUINT32 & u4Height)
         u4Height = mShotParam.u4PostViewWidth;
         u4Width  = mShotParam.u4PostViewHeight;
     }
-    MY_LOGD("prepost: %d, %d", u4Width, u4Height);
+    MY_LOGD("dongtuo prepost: %d, %d", u4Width, u4Height);
 }
 /*******************************************************************************
 *
@@ -1889,7 +1913,7 @@ void*
 SingleShot::
 _preAllocMemThread(void* arg)
 {
-    MY_LOGD(" + tid(%d)", ::gettid());
+    MY_LOGD("dongtuo  + tid(%d)", ::gettid());
     ::prctl(PR_SET_NAME,"SingleShot@AllocMem",0,0,0);
     //
 
@@ -1902,7 +1926,7 @@ _preAllocMemThread(void* arg)
     }
 
     pSingleShot->_preAllocMem();
-    MY_LOGD(" - tid(%d)", ::gettid());
+    MY_LOGD("dongtuo  - tid(%d)", ::gettid());
     return NULL;
 }
 
@@ -1966,6 +1990,13 @@ _preAllocMem()
         ImgBufInfo rJpegImgBufInfo = queryJpegImgBufInfo();
         ImgBufInfo rThumbImgBufInfo = queryThumbImgBufInfo();
     }
+    else if (isDataMsgEnabled(ECamShot_DATA_MSG_YUV) && isDataMsgEnabled(ECamShot_DATA_MSG_POSTVIEW))
+    {
+        CPTLogStr(Event_SShot_startOneMem, CPTFlagSeparator, "queryYuvImgXchipLeftBufInfo");
+        ImgBufInfo rYuvImgLeftBufInfo = queryYuvImgXchipLeftBufInfo();  
+        CPTLogStr(Event_SShot_startOneMem, CPTFlagSeparator, "queryYuvImgXchipRightBufInfo");
+        ImgBufInfo rYuvImgRightBufInfo = queryYuvImgXchipRightBufInfo();
+    }
 
     FUNCTION_LOG_END;
     return MTRUE;
@@ -1987,7 +2018,7 @@ fgPipeNotifyCb(MVOID* user, NSCamPipe::PipeNotifyInfo const msg)
                 pSingleShot->handleNotifyCallback(ECamShot_NOTIFY_MSG_EOF, 0, 0);
                 break;
             case NSCamPipe::ECamPipe_NOTIFY_MSG_DROPFRAME:
-                MY_LOGD("dropframe %d", msg.ext1);
+                MY_LOGD("dongtuo dropframe %d", msg.ext1);
                 pSingleShot->checkIfFireFlash(msg.ext1);
                 break;
             default:
@@ -2007,7 +2038,7 @@ checkIfFireFlash(MUINT32 countdown)
           mu4FlashCountDown > countdown )        //fire immediately
         )
     {
-        MY_LOGD("fire flash");
+        MY_LOGD("dongtuo fire flash");
 
         #if USE_HAL3A
         NS3A::Hal3ABase *p3AObj = Hal3ABase::createInstance(mSensorParam.u4DeviceID);
