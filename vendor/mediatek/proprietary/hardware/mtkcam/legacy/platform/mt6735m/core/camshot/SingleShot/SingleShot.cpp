@@ -1712,6 +1712,7 @@ SingleShot::
 queryYuvImgXchipLeftBufInfo()
 {
     // Always use YV12
+    EImageFormat eImgFmt = eImgFmt_YV12;
     MUINT32 u4Width = 0, u4Height = 0, u4WidthXchip = 0;
     getPictureDimension(u4Width, u4Height);
     //
@@ -1729,6 +1730,7 @@ queryYuvImgXchipRightBufInfo()
 {
     // Always use YV12
     EImageFormat eImgFmt = eImgFmt_YV12;
+    MUINT32 u4Width = 0, u4Height = 0, u4WidthXchip = 0;
     getPictureDimension(u4Width, u4Height);
     //
     u4WidthXchip = u4Width / 2;
