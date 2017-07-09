@@ -488,11 +488,18 @@ startOne(ImgBufInfo const & rImgBufInfo)
     // calc the zoom crop ratio
 
     Rect rRect = MtkCamUtils::calCrop(rSrcRect, rDstRect, mShotParam.u4ZoomRatio);
-    //Rect rLeftRect(0, 0, 720, 2560);
+
+    /* create crop rect for left and right image
+     *
+     * Left rect: (0, w/2), (0, h);
+     * Right rect: (w/2, w), (0, h);
+     */
+
     Rect rLeftRect = rDstRect;
     rLeftRect.w /= 2;
-    MY_LOGD("dongtuo %d %d %d %d ORI %d\n", rLeftRect.x, rLeftRect.y, rLeftRect.w, rLeftRect.h, mu4DiffOri);
-	//Rect rRightRect
+    Rect rRightRect = rLeftRect;
+    rRightRect.x = rRightRect.w;
+    MY_LOGD("dongtuo Left crop rect %d %d %d %d ORI %d\n", rLeftRect.x, rLeftRect.y, rLeftRect.w, rLeftRect.h, mu4DiffOri);
 
 
     // (2) create yuv image
@@ -512,7 +519,6 @@ startOne(ImgBufInfo const & rImgBufInfo)
         ImgBufInfo rJpegImgBufInfo = queryJpegImgBufInfo();
         CPTLogStr(Event_SShot_startOneMem, CPTFlagSeparator, "queryThumbImgBufInfo");
         ImgBufInfo rThumbImgBufInfo = queryThumbImgBufInfo();
-MY_LOGD("dongtuo create jpeg image 1");
 
         MUINT32 u4JpegSize = 0;
         MUINT32 u4ThumbnailSize = 0;
@@ -523,7 +529,7 @@ MY_LOGD("dongtuo create jpeg image 1");
             ImgBufInfo rPrePostViewBufInfo = queryPrePostViewImgInfo();
             ret = ret
                    && createYuvRawImg(rImgBufInfo, rRect, ANGLE_SUB(mShotParam.u4PictureRotation, mu4DiffOri) , mShotParam.u4PictureFlip, rYuvImgBufInfo, rPrePostViewBufInfo)
-                   && rotatePostview( rPrePostViewBufInfo, ANGLE_SUB(360, mu4DiffOri), 0, rPostViewBufInfo );
+                   && rotatePostview(rPrePostViewBufInfo, ANGLE_SUB(360, mu4DiffOri), 0, rPostViewBufInfo );
         }
         else
         {
@@ -531,7 +537,11 @@ MY_LOGD("dongtuo create jpeg image 1");
                    && createYuvRawImg(rImgBufInfo, rRect, mShotParam.u4PictureRotation, mShotParam.u4PictureFlip, rYuvImgBufInfo, rPostViewBufInfo);
         }
         createYuvRawImg(rImgBufInfo, rLeftRect, mShotParam.u4PictureRotation, mShotParam.u4PictureFlip, rYuvImgLeftBufInfo, rPostViewBufInfo);
-        createYuvRawImg(rImgBufInfo, rLeftRect, mShotParam.u4PictureRotation, mShotParam.u4PictureFlip, rYuvImgRightBufInfo, rPostViewBufInfo);
+        createYuvRawImg(rImgBufInfo, rRightRect, mShotParam.u4PictureRotation, mShotParam.u4PictureFlip, rYuvImgRightBufInfo, rPostViewBufInfo);
+        // This will hopefully created 3 yuv images per shot.
+        // cnt % 3 == 0, original image
+        // cnt % 3 == 1, left image
+        // cnt % 3 == 2, right image
         ret = ret
                && handleDataCallback(ECamShot_DATA_MSG_POSTVIEW, 0, 0, reinterpret_cast<MUINT8*>(rPostViewBufInfo.u4BufVA), rPostViewBufInfo.u4BufSize)
                && handleDataCallback(ECamShot_DATA_MSG_YUV, 0 , 0 , reinterpret_cast<MUINT8*>(rYuvImgBufInfo.u4BufVA), rYuvImgBufInfo.u4BufSize)
@@ -549,29 +559,32 @@ MY_LOGD("dongtuo create jpeg image 1");
     }
     else if (isDataMsgEnabled(ECamShot_DATA_MSG_YUV) && isDataMsgEnabled(ECamShot_DATA_MSG_POSTVIEW))
     {
-MY_LOGD("dongtuo create jpeg image 2");
-        ImgBufInfo rYuvImgBufInfo = queryYuvRawImgBufInfo();
-        ImgBufInfo rPostViewBufInfo = queryPostViewImgInfo();
+        MY_LOGD("dongtuo create YUV image and postview image");
+        //ImgBufInfo rYuvImgBufInfo = queryYuvRawImgBufInfo();
+        //ImgBufInfo rPostViewBufInfo = queryPostViewImgInfo();
+        CPTLogStr(Event_SShot_startOneMem, CPTFlagSeparator, "queryYuvImgXchipLeftBufInfo");
+        ImgBufInfo rYuvImgLeftBufInfo = queryYuvImgXchipLeftBufInfo();
+        CPTLogStr(Event_SShot_startOneMem, CPTFlagSeparator, "queryYuvImgXchipRightBufInfo");
+        ImgBufInfo rYuvImgRightBufInfo = queryYuvImgXchipRightBufInfo();
 
-        if( mu4DiffOri )
+        if( 0 )//mu4DiffOri )
         {
             ImgBufInfo rPrePostViewBufInfo = queryPrePostViewImgInfo();
             ret = ret
-                   && createYuvRawImg(rImgBufInfo, rRect, ANGLE_SUB(mShotParam.u4PictureRotation, mu4DiffOri), mShotParam.u4PictureFlip, rYuvImgBufInfo, rPrePostViewBufInfo)
-                   && rotatePostview( rPrePostViewBufInfo, ANGLE_SUB(360, mu4DiffOri), 0, rPostViewBufInfo );
+                   && createYuvRawImg(rImgBufInfo, rRect, ANGLE_SUB(mShotParam.u4PictureRotation, mu4DiffOri), mShotParam.u4PictureFlip, rYuvImgLeftBufInfo, rPrePostViewBufInfo)
+                   && rotatePostview(rPrePostViewBufInfo, ANGLE_SUB(360, mu4DiffOri), 0, rYuvImgRightBufInfo);
         }
         else
         {
             ret = ret
-                   && createYuvRawImg(rImgBufInfo, rRect, mShotParam.u4PictureRotation, mShotParam.u4PictureFlip, rYuvImgBufInfo, rPostViewBufInfo);
+                   && createYuvRawImg(rImgBufInfo, rRect, mShotParam.u4PictureRotation, mShotParam.u4PictureFlip, rYuvImgLeftBufInfo, rYuvImgRightBufInfo);
         }
         ret = ret
-               && handleDataCallback(ECamShot_DATA_MSG_POSTVIEW, 0, 0, reinterpret_cast<MUINT8*>(rPostViewBufInfo.u4BufVA), rPostViewBufInfo.u4BufSize)
-               && handleDataCallback(ECamShot_DATA_MSG_YUV, 0 , 0 , reinterpret_cast<MUINT8*>(rYuvImgBufInfo.u4BufVA), rYuvImgBufInfo.u4BufSize);
+               && handleDataCallback(ECamShot_DATA_MSG_POSTVIEW, 0, 0, reinterpret_cast<MUINT8*>(rYuvImgRightBufInfo.u4BufVA), rYuvImgRightBufInfo.u4BufSize)
+               && handleDataCallback(ECamShot_DATA_MSG_YUV, 0 , 0 , reinterpret_cast<MUINT8*>(rYuvImgLeftBufInfo.u4BufVA), rYuvImgLeftBufInfo.u4BufSize);
     }
     else if (isDataMsgEnabled(ECamShot_DATA_MSG_YUV))
     {
-MY_LOGD("dongtuo create jpeg image 3");
         ImgBufInfo rYuvImgBufInfo = queryYuvRawImgBufInfo();
         ret = ret
                && createYuvRawImg(rImgBufInfo, rRect, ANGLE_SUB(mShotParam.u4PictureRotation, mu4DiffOri), mShotParam.u4PictureFlip, rYuvImgBufInfo)
@@ -579,7 +592,6 @@ MY_LOGD("dongtuo create jpeg image 3");
     }
     else if (isDataMsgEnabled(ECamShot_DATA_MSG_POSTVIEW))
     {
-MY_LOGD("dongtuo create jpeg image 4");
         //! should not enter this case
         ImgBufInfo rPostViewBufInfo = queryPostViewImgInfo();
         if( mu4DiffOri )
@@ -1093,8 +1105,15 @@ createYuvRawImg(ImgBufInfo const & rSrcImgBufInfo, Rect const rSrcCropRect, MUIN
     profile.print();
     if (mu4DumpFlag)
     {
+        static cnt == 0;
         char fileName[256] ={'\0'};
-        sprintf(fileName, "/%s/shot_yuv%dx%d.yuv", MEDIA_PATH, rDstImgBufInfo1.u4ImgWidth, rDstImgBufInfo1.u4ImgHeight);
+        if(cnt % 3 == 0)
+            sprintf(fileName, "/%s/shot_original_yuv%dx%d_cnt%d.yuv", MEDIA_PATH, rDstImgBufInfo1.u4ImgWidth, rDstImgBufInfo1.u4ImgHeight, cnt++);
+        else if(cnt % 3 == 1)
+            sprintf(fileName, "/%s/shot_left_yuv%dx%d_cnt%d.yuv", MEDIA_PATH, rDstImgBufInfo1.u4ImgWidth, rDstImgBufInfo1.u4ImgHeight, cnt++);
+        else{
+            sprintf(fileName, "/%s/shot_right_yuv%dx%d_cnt%d.yuv", MEDIA_PATH, rDstImgBufInfo1.u4ImgWidth, rDstImgBufInfo1.u4ImgHeight, cnt++);
+        }
 
         MtkCamUtils::saveBufToFile(fileName, reinterpret_cast<MUINT8*>( rDstImgBufInfo1.u4BufVA), rDstImgBufInfo1.u4BufSize);
 
@@ -1692,23 +1711,11 @@ ImgBufInfo
 SingleShot::
 queryYuvImgXchipLeftBufInfo()
 {
-    // is upper layer register buffer
-    if (0 != mYuvImgLeftBufInfo.u4BufSize)
-    {
-        return mYuvImgLeftBufInfo;
-    }
-    
-    //
-    EImageFormat eImgFmt = mShotParam.ePictureFmt;
-    // YUV format not set, use YUY2 as default
-    if (eImgFmt_UNKNOWN == eImgFmt || !isDataMsgEnabled(ECamShot_DATA_MSG_YUV))
-    {
-        eImgFmt = eImgFmt_YUY2;
-    }
+    // Always use YV12
     MUINT32 u4Width = 0, u4Height = 0, u4WidthXchip = 0;
     getPictureDimension(u4Width, u4Height);
     //
-    u4WidthXchip = u4Width/2;
+    u4WidthXchip = u4Width / 2;
     allocImgMem("Yuv", eImgFmt, u4WidthXchip, u4Height, mLeftYuvMem);
     ImgBufInfo rImgBufInfo;
     setImageBuf(eImgFmt, u4WidthXchip, u4Height,  rImgBufInfo, mLeftYuvMem);
@@ -1720,24 +1727,11 @@ ImgBufInfo
 SingleShot::
 queryYuvImgXchipRightBufInfo()
 {
-    // is upper layer register buffer
-    if (0 != mYuvImgRightBufInfo.u4BufSize)
-    {
-        return mYuvImgRightBufInfo;
-    }
-    
-    //
-    EImageFormat eImgFmt = mShotParam.ePictureFmt;
-    // YUV format not set, use YUY2 as default
-    if (eImgFmt_UNKNOWN == eImgFmt || !isDataMsgEnabled(ECamShot_DATA_MSG_YUV))
-    {
-        eImgFmt = eImgFmt_YUY2;
-    }
-    eImgFmt = eImgFmt_YV12;
-    MUINT32 u4Width = 0, u4Height = 0, u4WidthXchip = 0;
+    // Always use YV12
+    EImageFormat eImgFmt = eImgFmt_YV12;
     getPictureDimension(u4Width, u4Height);
     //
-    u4WidthXchip = u4Width/2;
+    u4WidthXchip = u4Width / 2;
     allocImgMem("Yuv", eImgFmt, u4WidthXchip, u4Height, mRightYuvMem);
     ImgBufInfo rImgBufInfo;
     setImageBuf(eImgFmt, u4WidthXchip, u4Height,  rImgBufInfo, mRightYuvMem);
