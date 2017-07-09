@@ -193,8 +193,8 @@ private:      //// data members
     ////
     IMEM_BUF_INFO mRawMem;
     IMEM_BUF_INFO mYuvMem;
-	IMEM_BUF_INFO mLeftYuvMem;
-	IMEM_BUF_INFO mRightYuvMem;
+    IMEM_BUF_INFO mLeftYuvMem;
+    IMEM_BUF_INFO mRightYuvMem;
     IMEM_BUF_INFO mPostViewMem;
     IMEM_BUF_INFO mPrePostViewMem;//fake orientation
     IMEM_BUF_INFO mJpegMem;
