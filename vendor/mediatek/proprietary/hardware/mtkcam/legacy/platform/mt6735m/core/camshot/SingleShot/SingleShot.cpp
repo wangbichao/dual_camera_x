@@ -1103,9 +1103,9 @@ createYuvRawImg(ImgBufInfo const & rSrcImgBufInfo, Rect const rSrcCropRect, MUIN
     pPostProcPipe->stop();
     CAM_TRACE_END();
     profile.print();
-    if (mu4DumpFlag)
+    if (1)//mu4DumpFlag)
     {
-        static cnt == 0;
+        static uint32_t cnt = 0;
         char fileName[256] ={'\0'};
         if(cnt % 3 == 0)
             sprintf(fileName, "/%s/shot_original_yuv%dx%d_cnt%d.yuv", MEDIA_PATH, rDstImgBufInfo1.u4ImgWidth, rDstImgBufInfo1.u4ImgHeight, cnt++);

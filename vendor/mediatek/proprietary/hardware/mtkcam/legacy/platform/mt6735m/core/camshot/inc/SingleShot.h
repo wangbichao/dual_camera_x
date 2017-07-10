@@ -185,8 +185,6 @@ private:      //// data members
     ////      buffer
     ImgBufInfo mRawImgBufInfo;
     ImgBufInfo mYuvImgBufInfo;
-    ImgBufInfo mYuvImgLeftBufInfo;
-    ImgBufInfo mYuvImgRightBufInfo;
     ImgBufInfo mPostViewImgBufInfo;
     ImgBufInfo mJpegImgBufInfo;
     ImgBufInfo mThumbImgBufInfo;
